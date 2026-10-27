@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill ZIP 下载工具</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Skill ZIP 首页"><span class="brand-icon">↓</span> Skill ZIP <span class="brand-tag">LOCAL TOOL</span></a>
+    <span class="local-badge"><span></span> 仅在本机运行</span>
+  </header>
+  <main>
+    <div class="intro"><p class="eyebrow">把技能文件带走，不必先安装</p><h1>一个链接，下载 Skill ZIP。</h1><p>选择来源，粘贴技能页面链接。下载器会校验文件，并整理成单个技能压缩包。</p></div>
+    <div class="layout">
+      <section class="form-card" aria-labelledby="form-title">
+        <div class="card-heading"><h2 id="form-title">新建下载</h2><span>只下载 · 不执行</span></div>
+        <form id="download-form">
+          <fieldset class="sources"><legend>01 <span>选择来源</span></legend>
+            <label class="source-option"><input type="radio" name="sourceType" value="github"><span><strong>GitHub</strong><small>仓库或技能目录</small></span></label>
+            <label class="source-option"><input type="radio" name="sourceType" value="skills.sh" checked><span><strong>skills.sh</strong><small>技能详情页面</small></span></label>
+            <label class="source-option"><input type="radio" name="sourceType" value="clawhub"><span><strong>ClawHub</strong><small>技能详情页面</small></span></label>
+          </fieldset>
+          <div class="url-section"><div class="label-row"><label for="source-url">02 <span>粘贴链接</span></label><button type="button" id="fill-example" class="text-button">填入示例 ↗</button></div>
+            <input id="source-url" name="sourceUrl" type="url" required maxlength="4096" placeholder="https://skills.sh/owner/repo/skill" autocomplete="off" spellcheck="false" aria-describedby="url-hint">
+            <p id="url-hint" class="field-hint">请填写技能详情页，而不是搜索页或站点首页。</p>
+          </div>
+          <div class="mode-note" id="mode-note">正在读取服务配置…</div>
+          <details id="advanced"><summary>高级选项 <span>可选</span></summary>
+            <div id="github-options" class="advanced-grid">
+              <div><label for="skill-path">技能目录</label><input id="skill-path" name="skillPath" maxlength="1024" placeholder="例如 skills/find-skills"><small>根目录填写 .；多个技能时可明确指定。</small></div>
+              <div><label for="skill-name">技能名称</label><input id="skill-name" name="skill" maxlength="200" placeholder="例如 find-skills"><small>目录未指定时，用于匹配目标技能。</small></div>
+              <div class="full-width"><label for="git-ref">分支、标签或提交</label><input id="git-ref" name="ref" maxlength="512" placeholder="留空使用默认分支"><small>可使用 refs/heads/main、refs/tags/v1.0 或完整提交 SHA。</small></div>
+            </div>
+            <div id="clawhub-options" class="advanced-grid" hidden><div class="full-width"><label for="skill-version">技能版本</label><input id="skill-version" name="version" maxlength="200" placeholder="例如 1.0.0"><small>留空由平台选择当前版本。</small></div></div>
+          </details>
+          <button id="download-button" class="primary-button" type="submit" disabled><span id="button-label">下载 ZIP</span><span aria-hidden="true">↓</span></button>
+          <p class="submit-note">下载内容不会被安装或执行；使用前请自行审查。</p>
+        </form>
+        <section id="result" class="result" role="status" aria-live="polite" hidden><h3 id="result-title"></h3><p id="result-message"></p><code id="result-hash" hidden></code><a id="save-again" hidden>再次保存 ZIP ↓</a></section>
+      </section>
+      <aside>
+        <section class="guide-card"><p class="eyebrow">下载后你会得到</p><h2>一个技能，一份 ZIP。</h2><div class="file-tree"><div>▣ &nbsp; skill-name.zip</div><p>├─ SKILL.md</p><p>├─ scripts/</p><p>├─ references/</p><p>└─ assets/</p></div><p class="muted">保留技能目录内的原有文件。示意中的子目录仅在源技能存在时保留。</p></section>
+        <section class="steps-card"><h3>程序会做什么</h3><ol><li><span>1</span><div><strong>解析来源</strong><p>确认站点、仓库或平台文件。</p></div></li><li><span>2</span><div><strong>获取并校验</strong><p>限制文件大小，检查 ZIP 与路径。</p></div></li><li><span>3</span><div><strong>打包并保存</strong><p>输出单个 Skill，并显示 SHA-256。</p></div></li></ol></section>
+        <p class="boundary-note">公开链接也可能受平台限流或权限限制。服务凭证由运行程序的人配置，表单不接收 Token。</p>
+      </aside>
+    </div>
+    <footer>本机工具，不是公开托管服务。最多同时处理 2 个下载任务。</footer>
+  </main>
+</body>
+</html>
