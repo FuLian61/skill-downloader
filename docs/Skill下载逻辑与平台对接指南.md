@@ -10,7 +10,7 @@
 
 统一的是“HTTP 获取、技能提取、校验和 ZIP 打包能力”，不是强制所有文件都从 GitHub 获取。
 
-- 确认是 GitHub 来源：复用 GitHub 下载器。
+- 直接 GitHub、skills.sh 快捷模式或 ClawHub 明确转交 GitHub：复用 GitHub 下载器；skills.sh 正式模式始终使用平台文件快照。
 - 平台直接托管 ZIP：下载平台 ZIP，再校验和整理。
 - 平台提供内联文本文件：校验路径后本地打包。
 - 资源不存在、无法确定技能、缺少凭证、平台拒绝：明确报错，不猜测来源，不绕过访问限制。
@@ -82,7 +82,7 @@ CLI / Java 返回本地结果，或网页接口返回二进制附件
 
 - `sourceType` 必须与解析出的链接来源一致。
 - ClawHub 不接受 `ref`、`skillPath`、`skill`；其他来源不接受 `version`。
-- skills.sh 非 GitHub 内联来源也不接受 `ref`、`skillPath`、`skill`。
+- skills.sh 正式模式所有来源均不接受 `ref`、`skillPath`、`skill`。
 - 不允许调用方传入服务器输出路径、代理地址或平台 Token。
 - 网页接口拒绝未知字段、重复 JSON 字段、超长字段及控制字符。
 
@@ -219,19 +219,16 @@ GET {SKILLS_SH_API_BASE}/api/v1/skills/{id}
 Authorization: Bearer <由服务端 TokenProvider 提供>
     ↓
 检查详情 id、source、slug 与请求一致
-    ├─ owner/repo 型来源
-    │     → 复用 GitHub 解析及下载
-    └─ domain 型来源
-          → files 必须为非空数组
-          → 逐项读取 path、contents
-          → UTF-8 文本打包
+    → 所有来源（owner/repo 与 domain）读取 files 非空数组
+    → 逐项读取 path、contents
+    → UTF-8 文本打包，不请求 GitHub
 ```
 
-当前实现不是从详情中随意寻找任意 `installUrl` 再下载，而是校验输入来源和详情一致后，按已支持的来源形状分流。
+当前实现不跟随详情中的 `installUrl` 下载；只使用正式 API 提供的文件快照，缺失时明确失败，不回退到 GitHub。
 
-对于 GitHub 来源，即使详情提供文件快照，当前仍优先从 GitHub 获取解析到的提交；**不保证与 skills.sh 缓存快照相同**。
+GitHub 来源同样使用 skills.sh 快照，不查询 GitHub 默认分支或提交，不下载仓库 ZIP。正式模式拒绝 `ref`、`skillPath`、`skill` 覆盖参数，不保证快照与仓库最新提交同步。
 
-非 GitHub 来源的文件要求：
+所有正式 API 来源的文件要求：
 
 - `path` 是安全相对路径，不得重复。
 - `contents` 必须是字符串；空文件内容可以为空字符串。

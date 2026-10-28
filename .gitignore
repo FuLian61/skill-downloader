@@ -16,3 +16,4 @@
 *.key
 *.p12
 *.jks
+/.vercel/

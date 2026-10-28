@@ -93,7 +93,7 @@ java -jar target/skill-downloader-1.0.0.jar https://clawhub.ai/owner/skills/slug
 
 GitHub 同时接受 `/tree/分支/目录` 页面和仓库链接 `#ref`（命令行需引号）。`--ref` 优先于 URL 中的 ref，可传完整 `refs/heads/...`、`refs/tags/...` 或提交 SHA，避免分支和标签同名歧义。分支本身含 `/` 时，请使用仓库 URL 加 `--ref` 和 `--path`，不要依赖 tree URL 的歧义解析。缺省分支会查询 GitHub 元数据，再固定到具体提交下载。私有仓库可以设置 `GITHUB_TOKEN`，令牌仅发给 `api.github.com`，不会转发给 codeload。归档使用 GitHub 官方 zipball API，由其重定向至下载端点，不强制所有内容都来自 codeload。
 
-skills.sh 提供 `shortcut` 和 `api` 两种显式模式，默认 shortcut 保持旧调用兼容，并输出模式提示。快捷模式仅处理 `/owner/repo/skill` GitHub 来源，不调用详情 API。两种模式定位目录时均支持目录名或 `SKILL.md` 的简单 YAML `name` 字段；复杂 YAML、同名技能请用 `--path` 明确选择。
+skills.sh 提供 `shortcut` 和 `api` 两种显式模式，默认 shortcut 保持旧调用兼容，并输出模式提示。快捷模式仅处理 `/owner/repo/skill` GitHub 来源，不调用详情 API，可使用 `--path` 明确目录。正式 `api` 模式统一读取 skills.sh 详情中的 `files` 快照并本地打包，GitHub 来源也不再请求 GitHub；缺少快照直接失败，不回退。正式模式不支持 `--ref`、`--path`、`--skill`，只获取平台当前提供的快照，不保证是仓库最新版本。
 
 ClawHub 接受新旧页面路径及 `clawhub.com` 输入别名，实际 API 一律请求官方文档采用的 `clawhub.ai`。使用页面作者作为 `ownerHandle`，避免同名技能冲突。默认先查询最新版本再按该版本请求下载；无版本元数据时由下载接口解析来源。ZIP 响应直接校验并标准化打包；`public-github` 响应使用 `repo`、`commit`、`path` 获取固定提交。描述不携带扫描结论，程序会明确提示，并不宣称技能安全。不会绕过 API 返回的拒绝或审核阻止。
 
@@ -112,6 +112,8 @@ System.out.println(result.zipPath());
 
 ## skills.sh 正式 API 配置
 
+2026-10-29 已验证正式 API 热门榜单 50/50；最新用户联调中 skills.sh 与 ClawHub 各 10 项全部处理成功（4 项 DOWNLOADED、16 项 UNCHANGED、0 项失败）。此前失败的四个 hyperframes 技能已通过 skills.sh 文件快照成功下载，正式模式不再访问 GitHub。两站各 50 项完整下载尚未验证，OIDC 自动刷新尚未实现。IDEA 配置、Token 刷新说明、历史问题与最新验证记录见 `docs/热门技能定时同步.md` 第 8–10 节。文档不包含凭证正文。
+
 | 环境变量 | 默认值 | 用途 |
 |---|---|---|
 | `SKILLS_SH_MODE` | `shortcut` | 设为 `api` 启用详情 API；不会在 API 出错后静默降级 |
@@ -126,7 +128,7 @@ export SKILLS_SH_TOKEN_FILE=/absolute/path/to/rotating-token
 java -jar target/skill-downloader-1.0.0.jar https://skills.sh/vercel-labs/skills/find-skills
 ```
 
-正式模式调用 `/api/v1/skills/{id}`，检查 `id`、`source`、`slug` 与输入一致。GitHub 来源继续复用 GitHub 下载器；下载的是解析到的 GitHub 提交，不声称和平台缓存快照一致。非 GitHub 的 `/domain/skill` 来源要求详情包含完整 `files`，按 `path` 和 UTF-8 文本 `contents` 安全打包；文件为空、未知编码或缺失 `SKILL.md` 时明确报错。平台 `hash` 仅作为返回的快照标识，不作为本地 ZIP 的校验依据。
+正式模式调用 `/api/v1/skills/{id}`，检查 `id`、`source`、`slug` 与输入一致。所有来源均要求详情包含 `files`，按 `path` 和 UTF-8 文本 `contents` 安全打包，不再访问 GitHub；文件为空、未知编码或缺失 `SKILL.md` 时明确报错，不回退其他来源。平台 `hash` 仅作为返回的快照标识，不作为本地 ZIP 的校验依据。不保证平台快照与源仓库最新提交同步。
 
 **程序不会自行签发或获取 Vercel OIDC Token。** Token 文件必须由外部凭证刷新服务更新；401 时默认文件提供者仅重新读取一次，仅当凭证变化时重试。环境变量提供者不提供刷新。Java 调用方可注入 `TokenProvider`，在 `refresh()` 内对接自己的凭证服务：
 

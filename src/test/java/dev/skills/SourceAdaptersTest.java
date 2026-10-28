@@ -59,16 +59,41 @@ class SourceAdaptersTest {
         assertTrue(Files.isRegularFile(result.zipPath()));
     }
 
-    @Test void formalSkillsApiPrecedesGithubResolution() throws Exception {
+    @Test void formalSkillsApiPackagesGithubSnapshotWithoutGithubRequests() throws Exception {
         FakeRemote remote = new FakeRemote()
-                .json("https://skills.sh/api/v1/skills/org/repo/demo", "{\"id\":\"org/repo/demo\",\"source\":\"org/repo\",\"slug\":\"demo\",\"files\":null}")
-                .json("https://api.github.com/repos/org/repo", "{\"default_branch\":\"main\"}")
-                .json("https://api.github.com/repos/org/repo/commits/main", "{\"sha\":\"" + SHA + "\"}");
-        var adapter = new SkillsShSourceAdapter(remote, new GitHubSourceAdapter(remote), config(DownloadConfig.SkillsShMode.API));
-        var resolved = adapter.resolve(SkillDownloader.parseSource(URI.create("https://skills.sh/org/repo/demo")), DEFAULT);
-        assertInstanceOf(ResolvedSource.GitHub.class, resolved);
-        assertEquals("https://skills.sh/api/v1/skills/org/repo/demo", remote.requested.get(0));
-        assertEquals(SHA, resolved.revision());
+                .json("https://skills.sh/api/v1/skills/org/repo/demo", """
+                        {"id":"org/repo/demo","source":"org/repo","slug":"demo","hash":"snapshot",
+                        "files":[{"path":"SKILL.md","contents":"中文技能"},{"path":"references/demo.txt","contents":"reference"}]}
+                        """);
+        var result = new SkillDownloader(config(DownloadConfig.SkillsShMode.API), remote)
+                .download(URI.create("https://skills.sh/org/repo/demo"), temporary, DEFAULT);
+        assertEquals(List.of("https://skills.sh/api/v1/skills/org/repo/demo"), remote.requested);
+        assertEquals("snapshot", result.revision());
+        try (ZipFile zip = new ZipFile(result.zipPath().toFile())) {
+            assertEquals(2, zip.size());
+            assertEquals("reference", new String(zip.getInputStream(zip.getEntry("references/demo.txt")).readAllBytes(), StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test void githubSnapshotMissingDoesNotFallback() throws Exception {
+        FakeRemote remote = new FakeRemote().json("https://skills.sh/api/v1/skills/org/repo/demo",
+                "{\"id\":\"org/repo/demo\",\"source\":\"org/repo\",\"slug\":\"demo\",\"files\":null}");
+        var error = assertThrows(DownloadException.class, () -> new SkillDownloader(config(DownloadConfig.SkillsShMode.API), remote)
+                .download(URI.create("https://skills.sh/org/repo/demo"), temporary, DEFAULT));
+        assertEquals(DownloadException.Code.SOURCE_UNAVAILABLE, error.code());
+        assertEquals(1, remote.requested.size());
+    }
+
+    @Test void apiSnapshotRejectsGitOptionsBeforeNetwork() {
+        for (var options : List.of(new SkillDownloader.Options("main", null, null, null),
+                new SkillDownloader.Options(null, "skills/demo", null, null),
+                new SkillDownloader.Options(null, null, "demo", null))) {
+            FakeRemote remote = new FakeRemote();
+            var error = assertThrows(DownloadException.class, () -> new SkillDownloader(config(DownloadConfig.SkillsShMode.API), remote)
+                    .download(URI.create("https://skills.sh/org/repo/demo"), temporary, options));
+            assertEquals(DownloadException.Code.INVALID_INPUT, error.code());
+            assertTrue(remote.requested.isEmpty());
+        }
     }
 
     @Test void inlineSnapshotProducesSkillZip() throws Exception {

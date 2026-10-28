@@ -25,6 +25,9 @@ final class SkillsShSourceAdapter implements SourceAdapter {
             System.err.println("skills.sh 使用 GitHub 快捷模式，未查询平台详情；正式接口需配置 API 模式及凭证。");
             return github.resolve(source, options);
         }
+        if (options.ref() != null || options.path() != null || options.skill() != null) {
+            throw new DownloadException(DownloadException.Code.INVALID_INPUT, "正式 API 快照不支持 --ref、--path 或 --skill；不会回退 GitHub");
+        }
         String identifier = source.repo() + "/" + source.slug();
         String encoded = Arrays.stream(identifier.split("/")).map(SkillDownloader::encode).collect(Collectors.joining("/"));
         JsonNode detail = remote.json(config.skillsShApiBase().resolve("api/v1/skills/" + encoded));
@@ -32,10 +35,6 @@ final class SkillsShSourceAdapter implements SourceAdapter {
                 || !source.repo().equals(SkillDownloader.required(detail, "source"))
                 || !source.slug().equals(SkillDownloader.required(detail, "slug"))) {
             throw new DownloadException(DownloadException.Code.INVALID_RESPONSE, "skills.sh 详情与请求技能标识不一致");
-        }
-        if (source.repo().contains("/")) return github.resolve(source, options);
-        if (options.ref() != null || options.path() != null || options.skill() != null) {
-            throw new DownloadException(DownloadException.Code.INVALID_INPUT, "内联文件技能不支持 --ref、--path 或 --skill");
         }
         JsonNode files = detail.path("files");
         if (!files.isArray() || files.isEmpty()) throw new DownloadException(DownloadException.Code.SOURCE_UNAVAILABLE, "skills.sh 未提供可下载的文件快照");
