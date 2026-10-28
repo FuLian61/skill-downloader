@@ -11,7 +11,7 @@ import java.util.*;
 
 public final class SkillDownloader {
     private static final ObjectMapper JSON = new ObjectMapper();
-    static final long MAX_DOWNLOAD = 100L * 1024 * 1024;
+    static final long MAX_DOWNLOAD = Long.MAX_VALUE;
     private final DownloadConfig config;
     private final RemoteClient remote;
 
@@ -32,6 +32,10 @@ public final class SkillDownloader {
 
     public static void main(String[] args) {
         try {
+            if (args.length > 0 && Set.of("--sync-once", "--sync-list", "--schedule").contains(args[0])) {
+                SkillSyncMain.main(args);
+                return;
+            }
             if (args.length > 0 && args[0].equals("--serve")) {
                 SkillWebServer.main(Arrays.copyOfRange(args, 1, args.length));
                 return;
@@ -39,6 +43,7 @@ public final class SkillDownloader {
             if (args.length == 0 || args[0].equals("--help")) {
                 System.out.println("用法: java -jar skill-downloader-1.0.0.jar <URL> [--out 目录] [--skill 名称] [--ref 分支或提交] [--path 技能目录] [--version ClawHub版本]");
                 System.out.println("网页模式: java -jar skill-downloader-1.0.0.jar --serve [--port 8080]");
+                System.out.println("热门同步: --sync-once | --sync-list | --schedule [--config sync.properties]");
                 return;
             }
             Map<String, String> flags = new HashMap<>();

@@ -2,6 +2,20 @@
 
 Java 17 命令行程序，只下载、检查并重新打包单个 Skill，不安装、不执行任何技能代码。
 
+## 热门技能定时同步
+
+新增独立定时入口 `dev.skills.SkillSyncMain`，默认同步 **skills.sh 和 ClawHub 各自近期热门榜前 50 项**，下载 ZIP 到 `sync-data`。启动立即执行，上一轮完成后等待 6 小时再执行；与网页模式分别启动。
+
+```bash
+java -jar target/skill-downloader-1.0.0.jar --sync-list
+java -jar target/skill-downloader-1.0.0.jar --sync-once
+java -jar target/skill-downloader-1.0.0.jar --schedule --config sync.local.properties
+```
+
+第三条命令前请将 `sync.properties.example` 复制为 `sync.local.properties`。IDEA 直接运行 `SkillSyncMain`，建议先填程序参数 `--sync-list` 检查榜单；确认后改为 `--schedule`。无参数运行此入口也会启动定时下载。
+
+**默认 `skills.catalog=public`，无需 skills.sh Token**：读取公开榜单页面的完整初始数据，GitHub 来源复用快捷下载。非 GitHub 来源保留榜单排名，但下载记录为 `SOURCE_UNAVAILABLE`，不拿其他技能凑数。公开页面不是稳定 JSON API，结构变化会明确失败，不自动回退至鉴权接口。仍可显式设置 `skills.catalog=api` 使用需要凭证的正式 API。完整配置、输出结构、限制与外部调度对接见 [热门技能定时同步](docs/热门技能定时同步.md)。
+
 ## 网页表单
 
 skills.sh 页面链接同时接受 `skills.sh` 和 `www.skills.sh`，两者使用同一个适配器；不会因此放宽其他域名的校验。
@@ -140,7 +154,7 @@ var downloader = new dev.skills.SkillDownloader(config);
 
 - 仅允许固定 HTTPS 下载域名及显式配置的 skills.sh API 基地址，每次重定向重新检查；最多 5 次重定向。新平台 CDN 域名会被拒绝，必须经过审查再修改白名单。
 - 校验 DNS 地址，拒绝常见内网地址；这不是防 DNS 重绑定的服务器级 SSRF 隔离。不要直接将此 CLI 暴露为不可信用户可调用的公网服务；服务端部署还需出口网络控制。
-- 单次 ZIP 下载最多 100 MiB，API JSON 最多 16 MiB，解压总量最多 300 MiB，最多 20,000 个 ZIP 条目；请求头超时 45 秒，每次正文下载期限 120 秒。
+- ZIP 下载不设业务大小上限，按流写入磁盘，请确保磁盘空间充足；API JSON 最多 16 MiB，解压总量仍最多 300 MiB，最多 20,000 个 ZIP 条目；请求头超时 45 秒，每次正文下载期限 120 秒。大仓库仍可能触发解压或超时限制。
 - 校验路径、重复条目、CRC 和实际解压大小；不将归档条目解压到磁盘。输出重新创建为普通 ZIP 条目，不恢复符号链接、可执行位或其他 Unix 元数据。
 - 最终 ZIP 根目录包含 `SKILL.md` 和技能目录内资源。跨目录依赖不会自动补齐，许可证及外部依赖应自行审查。
 - 输出 ZIP 是规范化后的文件，不保证与上游字节一致；SHA-256 是本地输出摘要，不是发布者签名或平台内容哈希验证。

@@ -1,5 +1,7 @@
 /target/
 /downloads/
+/sync-data/
+/sync.local.properties
 /.idea/
 *.iml
 .DS_Store

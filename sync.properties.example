@@ -1,0 +1,14 @@
+# Relative to the working directory; no tokens in this file.
+output.directory=sync-data
+# Top N per platform, not N combined. Maximum 50.
+top=50
+# Fixed delay after the previous run completes; starts immediately.
+interval.minutes=360
+item.delay.millis=1000
+platforms=skills.sh,clawhub
+# skills.sh: trending / hot / all-time
+skills.view=trending
+# public: no skills.sh token; api: authenticated API
+skills.catalog=public
+# ClawHub: trending / downloads / stars
+clawhub.sort=trending

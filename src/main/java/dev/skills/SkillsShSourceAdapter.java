@@ -22,7 +22,7 @@ final class SkillsShSourceAdapter implements SourceAdapter {
             throws IOException, InterruptedException {
         if (config.skillsShMode() == DownloadConfig.SkillsShMode.SHORTCUT) {
             if (!source.repo().contains("/")) throw new DownloadException(DownloadException.Code.SOURCE_UNAVAILABLE, "非 GitHub 来源需要 skills.sh 正式 API 模式");
-            System.err.println("skills.sh 使用 GitHub 快捷模式，未查询平台详情；正式接口请设置 SKILLS_SH_MODE=api。");
+            System.err.println("skills.sh 使用 GitHub 快捷模式，未查询平台详情；正式接口需配置 API 模式及凭证。");
             return github.resolve(source, options);
         }
         String identifier = source.repo() + "/" + source.slug();

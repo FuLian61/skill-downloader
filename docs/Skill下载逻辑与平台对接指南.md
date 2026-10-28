@@ -306,7 +306,7 @@ GET https://clawhub.ai/api/v1/download
 
 | 限制 | 当前值 |
 |---|---|
-| ZIP 下载大小 | 100 MiB |
+| ZIP 下载大小 | 不设业务大小上限，流式写入磁盘；仍保留解压大小和超时限制，注意磁盘容量 |
 | 详情 JSON 下载大小 | 16 MiB |
 | ClawHub 非 ZIP 描述 | 2 MiB |
 | ZIP 实际解压总大小 | 300 MiB |

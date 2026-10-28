@@ -95,4 +95,57 @@ class HttpFileDownloaderTest {
         assertEquals(DownloadException.Code.FORBIDDEN,
                 assertThrows(DownloadException.class, () -> downloader.fetch(API, temporary.resolve("result"), 100)).code());
     }
+
+    @Test void publicPageAndWwwRedirectNeverReadOrSendPlatformToken() throws Exception {
+        List<URI> requests = new ArrayList<>();
+        var downloader = new HttpFileDownloader(config(() -> { fail("must not read token"); return null; }), request -> {
+            assertTrue(request.headers().firstValue("Authorization").isEmpty());
+            requests.add(request.uri());
+            return requests.size() == 1 ? reply(request, 307, Map.of("Location", List.of("https://www.skills.sh/trending")))
+                    : reply(request, 200, Map.of());
+        }, millis -> fail("no retry"), uri -> { });
+        downloader.fetch(URI.create("https://skills.sh/trending"), temporary.resolve("page"), 100);
+        assertEquals(2, requests.size());
+    }
+
+    @Test void publicPageWhitelistDoesNotAllowOtherPathsOrHosts() {
+        for (String url : List.of("https://www.skills.sh/api/v1/skills", "https://skills.sh/other", "https://evil.example/trending",
+                "https://skills.sh/trending?redirect=1", "http://skills.sh/trending")) {
+            assertThrows(DownloadException.class, () -> HttpFileDownloader.validateUri(URI.create(url), null));
+        }
+    }
+
+    @Test void zipDownloadAllowsMoreThanOneHundredMiB() throws Exception {
+        long size = 100L * 1024 * 1024 + 1;
+        InputStream body = new InputStream() {
+            long remaining = size;
+            public int read() {
+                if (remaining == 0) return -1;
+                remaining--;
+                return 0;
+            }
+            public int read(byte[] bytes, int offset, int length) {
+                if (length == 0) return 0;
+                if (remaining == 0) return -1;
+                int count = (int) Math.min(length, remaining);
+                Arrays.fill(bytes, offset, offset + count, (byte) 0);
+                remaining -= count;
+                return count;
+            }
+        };
+        var downloader = new HttpFileDownloader(config(() -> null), request -> new Reply(200,
+                HttpHeaders.of(Map.of("Content-Length", List.of(Long.toString(size))), (name, value) -> true), body, request),
+                millis -> fail("no retry"), uri -> {});
+        Path target = temporary.resolve("large.zip");
+        downloader.fetch(URI.create("https://codeload.github.com/owner/repo/zip/main"), target, SkillDownloader.MAX_DOWNLOAD);
+        assertEquals(size, Files.size(target));
+    }
+
+    @Test void metadataDownloadStillEnforcesSizeLimit() {
+        var downloader = new HttpFileDownloader(config(() -> null),
+                request -> reply(request, 200, Map.of("Content-Length", List.of("16777217"))),
+                millis -> fail("no retry"), uri -> {});
+        assertThrows(IOException.class, () -> downloader.fetch(URI.create("https://clawhub.ai/api/v1/skills"),
+                temporary.resolve("metadata.json"), 16L * 1024 * 1024));
+    }
 }

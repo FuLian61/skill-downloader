@@ -144,7 +144,9 @@ final class HttpFileDownloader implements RemoteClient {
     static void validateUri(URI uri, URI trustedBase) throws IOException {
         boolean trusted = trustedBase != null && trustedBase.getHost().equals(uri.getHost())
                 && uri.getPath().startsWith(trustedBase.getPath() + "api/v1/");
-        if (!"https".equals(uri.getScheme()) || (!HOSTS.contains(Objects.toString(uri.getHost(), "")) && !trusted)
+        boolean publicSkills = Set.of("skills.sh", "www.skills.sh").contains(Objects.toString(uri.getHost(), ""))
+                && Set.of("/", "/trending", "/hot").contains(Objects.toString(uri.getPath(), "")) && uri.getQuery() == null;
+        if (!"https".equals(uri.getScheme()) || (!HOSTS.contains(Objects.toString(uri.getHost(), "")) && !trusted && !publicSkills)
                 || uri.getUserInfo() != null || uri.getFragment() != null || (uri.getPort() != -1 && uri.getPort() != 443)) {
             throw new DownloadException(DownloadException.Code.INVALID_INPUT, "拒绝未许可的下载地址");
         }
